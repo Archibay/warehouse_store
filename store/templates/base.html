@@ -59,6 +59,9 @@
           <a class="nav-link active" aria-current="page" href="{% url 'store:book_list' %}">Books</a>
         </li>
         {% if request.user.is_authenticated %}
+        <li class="nav-item">
+          <a class="nav-link active" aria-current="page" href="{% url 'store:cart' %}">Cart</a>
+        </li>
         <div class="nav-item dropdown">
           <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             User functions

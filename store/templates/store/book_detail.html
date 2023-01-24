@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Post detail</h2>
+    {{ object.instance.pk }}
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <tr>
+                <td>Book</td>
+                <td>{{ book.title }}</td>
+            </tr>
+            <tr>
+                <td>Price</td>
+                <td>{{ book.price }}</td>
+            </tr>
+            <tr>
+                <td>Add to cart</td>
+                <td><a href='{% url "store:add_to_cart" pk=book.id %}'>Add to Cart</a></td>
+            </tr>
+        </table>
+    </div>
+{% endblock %}
