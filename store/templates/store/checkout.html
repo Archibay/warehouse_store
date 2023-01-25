@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Checkout</h2>
+    <form action= "{% url 'store:checkout' %}" method="POST" class="post-form">
+        {% csrf_token %}
+        <table class="table align-middle">
+            {{ form.as_table }}
+        </table>
+        <button type="submit" class="save btn btn-secondary">Save</button>
+    </form>
+{% endblock %}

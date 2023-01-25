@@ -13,12 +13,12 @@
             </tr>
             </thead>
             <tbody>
-            {% for a in books %}
+            {% for a in order_item %}
             <tr>
-                <td><a href="{% url 'store:book_detail' pk=a.id %}">{{ a.title }}</a></td>
-                <td>{{ a.price }}</td>
-                <td>{{ order_items.quantity }}</td>
-                <td>{$ a.price * order_items.quantity $}</td>
+                <td>{{ a.book_id.title }}</td>
+                <td>{{ a.book_id.price }}</td>
+                <td>{{ a.quantity }}</td>
+                <td>{{ total_price }}</td>
             </tr>
             {% endfor %}
             </tbody>

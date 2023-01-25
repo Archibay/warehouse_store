@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Book, Order, OrderItem
 from django.contrib.auth.models import User
-# from .forms import PostForm, CommentForm, ContactUsForm
+from .forms import OrderForm
 from django.utils import timezone
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,6 +14,7 @@ from django.contrib import messages
 # from .tasks import send_mail as celery_send_mail
 from django.template.loader import render_to_string
 from django.http import JsonResponse
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class BookListView(ListView):
@@ -48,18 +49,29 @@ def add_to_cart(request, pk):
     # messages.success(request, "Cart updated!")
     return redirect('store:book_detail', pk=book.id)
 
+def get_cart(request):
+    user = request.user
+    try:
+        order = Order.objects.get(user_id=user.id)
+        order_item = OrderItem.objects.filter(order_id=order).all()
+        for i in order_item:
+            total_price = i.quantity * i.book_id.price
+        return render(request, 'store/cart_detail.html', {'total_price': total_price, 'order_item': order_item})
+    except ObjectDoesNotExist:
+        return render(request, 'store/cart_empty.html')
 
-class CartDetailView(LoginRequiredMixin, DetailView):
-    model = OrderItem
-    template_name = 'store/cart_detail.html'
+@login_required
+def checkout(request):
+    if request.method == "POST":
+        form = OrderForm(request.POST)
+        if form.is_valid():
 
-    def get_context_data(self, **kwargs):
-        context = super(CartDetailView, self).get_context_data(**kwargs)
-        user = self.get_object()
-        context['order_items'] = user.order_set
-        context['books'] = user.order_set.ordetitem_set.book.all()
-        return context
-
-    def get_object(self, **kwargs):
-        user = self.request.user
-        return user
+            return redirect('store:book_list')
+    else:
+        data = {
+            'firs_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email
+        }
+        form = OrderForm(data)
+    return render(request, 'store/checkout.html', {'form': form})
