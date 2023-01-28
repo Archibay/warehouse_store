@@ -13,12 +13,12 @@
             </tr>
             </thead>
             <tbody>
-            {% for a in order_item %}
+            {% for a in items_with_total_prices %}
             <tr>
-                <td>{{ a.book_id.title }}</td>
-                <td>{{ a.book_id.price }}</td>
-                <td>{{ a.quantity }}</td>
-                <td>{{ total_price }}</td>
+                <td>{{ a.item.book_id.title }}</td>
+                <td>{{ a.item.book_id.price }}</td>
+                <td>{{ a.item.quantity }}</td>
+                <td>{{ a.price }}</td>
             </tr>
             {% endfor %}
             </tbody>

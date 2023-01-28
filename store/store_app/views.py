@@ -49,29 +49,51 @@ def add_to_cart(request, pk):
     # messages.success(request, "Cart updated!")
     return redirect('store:book_detail', pk=book.id)
 
+
 def get_cart(request):
     user = request.user
     try:
-        order = Order.objects.get(user_id=user.id)
+        order = Order.objects.get(user_id=user.id, status='IP')
         order_item = OrderItem.objects.filter(order_id=order).all()
-        for i in order_item:
-            total_price = i.quantity * i.book_id.price
-        return render(request, 'store/cart_detail.html', {'total_price': total_price, 'order_item': order_item})
+        items_with_total_prices = []
+        for item in order_item:
+            total_price = item.quantity * item.book_id.price
+            items_with_total_prices.append({'item': item, 'price': total_price})
+        return render(request, 'store/cart_detail.html', {'items_with_total_prices': items_with_total_prices})
     except ObjectDoesNotExist:
         return render(request, 'store/cart_empty.html')
+
 
 @login_required
 def checkout(request):
     if request.method == "POST":
         form = OrderForm(request.POST)
         if form.is_valid():
-
+            order = Order.objects.get(user_id=request.user.id, status='IP')
+            order.status = 'SC'
+            order.delivery_address = form.cleaned_data['address']
+            order.save()
             return redirect('store:book_list')
     else:
-        data = {
-            'firs_name': request.user.first_name,
-            'last_name': request.user.last_name,
-            'email': request.user.email
-        }
-        form = OrderForm(data)
-    return render(request, 'store/checkout.html', {'form': form})
+        try:
+            data = {
+                'firs_name': request.user.first_name,
+                'last_name': request.user.last_name,
+                'email': request.user.email
+            }
+            form = OrderForm(data)
+            order = Order.objects.get(user_id=request.user.id, status='IP')
+            order_item = OrderItem.objects.filter(order_id=order).all()
+            total_price = []
+            items_with_total_prices = []
+            for item in order_item:
+                price = item.quantity * item.book_id.price
+                total_price.append(price)
+                items_with_total_prices.append({'item': item, 'price': price})
+            total_price = sum(total_price)
+            return render(request, 'store/checkout.html', {
+                'form': form,
+                'items_with_total_prices': items_with_total_prices,
+                'total_price': total_price})
+        except ObjectDoesNotExist:
+            return render(request, 'store/cart_empty.html')

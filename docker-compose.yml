@@ -1,0 +1,230 @@
+version: "3.8"
+
+services:
+  store:
+    container_name: store
+    build:
+      context: .
+      dockerfile: ./store/docker/Dockerfile
+    volumes:
+      - ./store:/app
+    networks:
+      - store_network
+      - nginx_network
+      - celery_network
+    expose:
+      - 8000
+    depends_on:
+      - db_store
+    environment:
+      DB_NAME: "db_store"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+      DB_HOST: "db_store"
+      DB_PORT: "5432"
+    restart: on-failure
+
+
+  warehouse:
+    container_name: warehouse
+    build:
+      context: .
+      dockerfile: ./warehouse/docker/Dockerfile
+    volumes:
+      - ./warehouse:/app
+    networks:
+      - warehouse_db_network
+      - nginx_network
+      - celery_network
+      - mailhog_network
+    expose:
+      - 8001
+    depends_on:
+      - db_warehouse
+    environment:
+      DB_NAME: "db_warehouse"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+      DB_HOST: "db_warehouse"
+      DB_PORT: "5432"
+    restart: on-failure
+
+
+  db_store:
+    container_name: db_store
+    image: postgres:14-alpine
+    volumes:
+      - db_store_volume:/var/lib/postgresql/data
+    networks:
+      - store_network
+#    depends_on:
+#      - store
+    expose:
+      - 5432
+    restart: on-failure
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'db_store'
+
+  db_warehouse:
+    container_name: db_warehouse
+    image: postgres:14-alpine
+    volumes:
+      - db_warehouse_volume:/var/lib/postgresql/data
+    networks:
+      - warehouse_db_network
+#    depends_on:
+#      - warehouse
+    expose:
+      - 5432
+    restart: on-failure
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'db_warehouse'
+
+  mailhog:
+    container_name: mailhog
+    image: mailhog/mailhog:latest
+    command: [ '-smtp-bind-addr', '0.0.0.0:25']
+    user: root
+    restart: on-failure
+    networks:
+      - mailhog_network
+      - nginx_network
+    expose:
+      - 1025
+      - 8025
+
+  redis_store:
+    container_name: redis_store
+    image: redis:5.0.6-alpine
+    restart: on-failure
+    networks:
+      - store_network
+    expose:
+      - 6379
+    volumes:
+      - redis_store:/var/lib/redis/data
+
+  redis_warehouse:
+    container_name: redis_warehouse
+    image: redis:5.0.6-alpine
+    restart: on-failure
+    networks:
+      - store_network
+    expose:
+      - 6379
+    volumes:
+      - redis_warehouse:/var/lib/redis/data
+
+  rabbitmq_store:
+    container_name: rabbitmq_store
+    image: rabbitmq:3.8.0-alpine
+    restart: on-failure
+    networks:
+      - store_network
+    expose:
+      - 5432
+    volumes:
+      - rabbitmq_store:/var/lib/rabbitmq
+
+  rabbitmq_warehouse:
+    container_name: rabbitmq_warehouse
+    image: rabbitmq:3.8.0-alpine
+    restart: on-failure
+    networks:
+      - store_network
+    expose:
+      - 5432
+    volumes:
+      - rabbitmq_warehouse:/var/lib/rabbitmq
+
+  celery_store:
+    container_name: celery_store
+    build:
+      context: .
+      dockerfile: ./store/docker/Dockerfile
+    restart: on-failure
+    expose: []
+    networks:
+      - store_network
+      - celery_network
+      - mailhog_network
+    depends_on:
+      - store
+      - redis_store
+      - rabbitmq_store
+    environment:
+      C_FORCE_ROOT: 'true'
+      DATABASE_URL: 'postgresql://postgres:postgres@db_store:5432/db_store'
+      DATABASE_HOST: 'db_store'
+      DATABASE_PORT: '5432'
+      REDIS_URL: 'redis://redis:6379/8'
+      REDIS_CACHE: 'redis:6379'
+      AMQP_URL: 'amqp://rabbitmq_store:5672'
+      CHECK_WEB: 'true'
+      WEB_HOST: 'store'
+      WEB_PORT: '8000'
+    command: celery -A store_sys worker -B --loglevel=INFO
+
+  celery_warehouse:
+    container_name: celery_warehouse
+    build:
+      context: .
+      dockerfile: ./warehouse/docker/Dockerfile
+    restart: on-failure
+    expose: [ ]
+    networks:
+      - store_network
+      - celery_network
+      - mailhog_network
+    depends_on:
+      - warehouse
+      - redis_warehouse
+      - rabbitmq_warehouse
+    environment:
+      C_FORCE_ROOT: 'true'
+      DATABASE_URL: 'postgresql://postgres:postgres@db_warehouse:5432/db_warehouse'
+      DATABASE_HOST: 'db_warehouse'
+      DATABASE_PORT: '5432'
+      REDIS_URL: 'redis://redis:6379/8'
+      REDIS_CACHE: 'redis:6379'
+      AMQP_URL: 'amqp://rabbitmq_warehouse:5672'
+      CHECK_WEB: 'true'
+      WEB_HOST: 'warehouse'
+      WEB_PORT: '7000'
+    command: celery -A warehouse_sys worker -B --loglevel=INFO
+
+  nginx:
+    container_name: nginx
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    restart: on-failure
+    networks:
+      - nginx_network
+    ports:
+      - 8000:8000
+      - 8025:8025
+      - 8001:8001
+    depends_on:
+      - store
+      - warehouse
+
+
+networks:
+  warehouse_db_network:
+  store_network:
+  nginx_network:
+  celery_network:
+  mailhog_network:
+
+volumes:
+  db_store_volume:
+  db_warehouse_volume:
+  rabbitmq_store:
+  rabbitmq_warehouse:
+  redis_store:
+  redis_warehouse:

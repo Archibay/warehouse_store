@@ -1,6 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
     <h2>Checkout</h2>
+    {{ object.instance.pk }}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+            <tr>
+                <td>Book</td>
+                <td>Price</td>
+                <td>Quantity</td>
+                <td>Total</td>
+            </tr>
+            </thead>
+            <tbody>
+            {% for a in items_with_total_prices %}
+            <tr>
+                <td>{{ a.item.book_id.title }}</td>
+                <td>{{ a.item.book_id.price }}</td>
+                <td>{{ a.item.quantity }}</td>
+                <td>{{ a.price }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div>
+        Total value of your order: {{ total_price }}
+    </div>
     <form action= "{% url 'store:checkout' %}" method="POST" class="post-form">
         {% csrf_token %}
         <table class="table align-middle">
