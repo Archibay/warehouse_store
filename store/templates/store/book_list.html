@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Books list</h2>
+
+    <table class="table table-hover">
+        <thead class="table-dark">
+        <tr>
+            <td>Title</td>
+            <td>Prise</td>
+        </tr>
+        </thead>
+        <tbody>
+        {% for a in book_list %}
+        <tr>
+            <td><a href='{% url "store:book_detail" pk=a.id %}'>{{ a.title }}</a></td>
+            <td>{{ a.price }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+
+{% endblock %}
